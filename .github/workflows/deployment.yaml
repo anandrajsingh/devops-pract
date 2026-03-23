@@ -27,4 +27,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: anandrajsingh/nodeapp:${{ github.sha }}
+          tags: |
+            anandrajsingh/nodeapp:latest
+            anandrajsingh/nodeapp:${{ github.sha }}
