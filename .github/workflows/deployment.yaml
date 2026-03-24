@@ -30,3 +30,31 @@ jobs:
           tags: |
             anandrajsingh/nodeapp:latest
             anandrajsingh/nodeapp:${{ github.sha }}
+
+      - name: Deploying to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Logging into Docker Hub..."
+            echo "${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
+
+            echo "Stopping old container..."
+            docker stop nodeapp || true
+
+            echo "Removing old container..."
+            docker rm nodeapp || true
+
+            echo "Cleaning up old unused images..."
+            docker image prune -af
+
+            echo "Starting new container..."
+            docker run -d \
+              --name nodeapp \
+              --pull=always \
+              -p 3000:3000 \
+              anandrajsingh/nodeapp:latest
+
+            echo "Deployment Complete"
