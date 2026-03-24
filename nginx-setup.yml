@@ -1,0 +1,57 @@
+---
+  - name: Setup node docker app and nginx reverse proxy
+    hosts: myvm
+    become: true
+
+    vars:
+      image: anandrajsingh/nodeapp:latest
+      container_name: nodeapp
+
+    tasks:
+      - name: Ensure Docker is running
+        service:
+          name: docker
+          state: started
+          enabled: true
+
+      - name: Install required packages
+        apt:
+          name:
+            - nginx
+          state: present
+          update_cache: yes
+
+      - name: Login to Docker Hub
+        shell: |
+          echo "{{ docker_access_token }}" | docker login -u "{{ docker_username }}" --password-stdin
+
+      - name: Remove old container if exists
+        docker_container:
+          name: "{{ container_name }}"
+          state: absent
+
+      - name: Run node app container
+        docker_container:
+          name: "{{ container_name }}"
+          image: "{{ image }}"
+          state: started
+          restart_policy: always
+          published_ports:
+            - "3000:3000"
+
+      - name: Configure nginx reverse proxy
+        copy:
+          dest: /etc/nginx/sites-available/default
+          content: |
+            server {
+              listen 80;
+
+              location / {
+                proxy_pass http://localhost:3000;
+              }
+            }
+
+      - name: Restart nginx
+        service:
+          name: nginx
+          state: restarted
